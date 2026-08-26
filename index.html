@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <title>Census Map & PDF Combiner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- pdf-lib and pdfjs-dist for client-side PDF handling -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+</head>
+<body class="bg-slate-50 font-sans min-h-screen p-6">
+    <div class="max-w-xl mx-auto bg-white p-6 rounded-xl shadow-md border border-slate-200">
+        <h1 class="text-xl font-bold text-slate-800 mb-2">Census 2027 A3 Map Combiner</h1>
+        <p class="text-xs text-slate-500 mb-6">Upload your blank A3 PDF form and the map image. The tool will neatly fit the map into the form's designated block area.</p>
+
+        <!-- Form Upload -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-slate-700 mb-1">1. Select Empty Census A3 PDF</label>
+            <input type="file" id="pdfFile" accept="application/pdf" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-300 rounded-md">
+        </div>
+
+        <!-- Image Upload -->
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-700 mb-1">2. Select Map Image (Line-Art / Satellite)</label>
+            <input type="file" id="imageFile" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer border border-slate-300 rounded-md">
+        </div>
+
+        <!-- Action Button -->
+        <button onclick="processAndMerge()" id="processBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-md transition duration-200 shadow">
+            Generate Final PDF
+        </button>
+
+        <!-- Status Indicator -->
+        <p id="statusText" class="text-center text-xs text-slate-600 mt-4"></p>
+    </div>
+
+    <script>
+        async function processAndMerge() {
+            const pdfInput = document.getElementById('pdfFile');
+            const imageInput = document.getElementById('imageFile');
+            const statusText = document.getElementById('statusText');
+            const btn = document.getElementById('processBtn');
+
+            if (!pdfInput.files.length || !imageInput.files.length) {
+                alert('Please upload both the A3 PDF form and the map image first!');
+                return;
+            }
+
+            try {
+                btn.disabled = true;
+                statusText.textContent = 'Reading files and processing...';
+
+                // Load files into memory
+                const pdfArrayBuffer = await pdfInput.files[0].arrayBuffer();
+                const imageArrayBuffer = await imageInput.files[0].arrayBuffer();
+
+                statusText.textContent = 'Embedding map into PDF box...';
+
+                // Load PDF using pdf-lib
+                const { PDFDocument } = PDFLib;
+                const pdfDoc = await PDFDocument.load(pdfArrayBuffer);
+                const page = pdfDoc.getPages()[0];
+
+                // Detect image type and embed
+                let embeddedImage;
+                const fileType = imageInput.files[0].type;
+                if (fileType.includes('png')) {
+                    embeddedImage = await pdfDoc.embedPng(imageArrayBuffer);
+                } else {
+                    embeddedImage = await pdfDoc.embedJpg(imageArrayBuffer);
+                }
+
+                // A3 dimensions in points (~ 841.89 x 1190.55 for portrait, flipped for landscape)
+                // Adjust these coordinates to match the exact boundary of your A3 form's blank map box
+                const boxX = 50;
+                const boxY = 150;
+                const boxWidth = 740;
+                const boxHeight = 450;
+
+                // Draw image neatly inside the target box area
+                page.drawImage(embeddedImage, {
+                    x: boxX,
+                    y: boxY,
+                    width: boxWidth,
+                    height: boxHeight,
+                });
+
+                statusText.textContent = 'Saving final document...';
+
+                // Serialize the PDFDocument to bytes
+                const modifiedPdfBytes = await pdfDoc.save();
+
+                // Trigger automatic download
+                const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'Census_2027_Filled_Map.pdf';
+                link.click();
+
+                statusText.textContent = 'Done! Your file has been downloaded successfully.';
+                btn.disabled = false;
+
+            } catch (error) {
+                console.error(error);
+                statusText.textContent = 'An error occurred during processing. Check console for details.';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
