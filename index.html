@@ -2,41 +2,35 @@
 <html lang="ta">
 <head>
     <meta charset="UTF-8">
-    <title>Census A3 Map Rotator & Combiner</title>
+    <title>Census A3 Map Combiner - Auto PDF</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
 <body class="bg-slate-50 font-sans min-h-screen p-6">
     <div class="max-w-xl mx-auto bg-white p-6 rounded-xl shadow-md border border-slate-200">
-        <h1 class="text-xl font-bold text-slate-800 mb-2">Census 2027 A3 Map Combiner (Full Fill)</h1>
-        <p class="text-xs text-slate-500 mb-6">Upload the blank A3 PDF form and map image, choose the correct rotation to point North upward, and generate the fully expanded map PDF.</p>
-
-        <!-- Form Upload -->
-        <div class="mb-4">
-            <label class="block text-sm font-medium text-slate-700 mb-1">1. Select Empty Census A3 PDF</label>
-            <input type="file" id="pdfFile" accept="application/pdf" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-300 rounded-md">
-        </div>
+        <h1 class="text-xl font-bold text-slate-800 mb-2">Census 2027 A3 Map Combiner</h1>
+        <p class="text-xs text-slate-500 mb-6">Upload your map screenshot. The app will automatically embed it into the default A3 census form and stretch it to perfectly fit the map box.</p>
 
         <!-- Image Upload -->
         <div class="mb-4">
-            <label class="block text-sm font-medium text-slate-700 mb-1">2. Select Map Image</label>
+            <label class="block text-sm font-medium text-slate-700 mb-1">1. Select Map Image (Screenshot)</label>
             <input type="file" id="imageFile" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer border border-slate-300 rounded-md">
         </div>
 
         <!-- Rotation Selector for North alignment -->
         <div class="mb-6">
-            <label class="block text-sm font-medium text-slate-700 mb-1">3. Map Rotation (Ensure North faces UP)</label>
+            <label class="block text-sm font-medium text-slate-700 mb-1">2. Map Rotation</label>
             <select id="rotationSelect" class="w-full p-2 border border-slate-300 rounded-md text-sm bg-white">
                 <option value="0">0° (No Rotation)</option>
-                <option value="90">90° Clockwise</option>
+                <option value="90" selected>90° Clockwise (Default)</option>
                 <option value="180">180° Upside Down</option>
-                <option value="270">270° Clockwise (90° Counter-Clockwise)</option>
+                <option value="270">270° Clockwise</option>
             </select>
         </div>
 
         <!-- Action Button -->
         <button onclick="processAndMerge()" id="processBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-md transition duration-200 shadow">
-            Generate Fully Filled Census PDF
+            Generate Exact-Fit Census PDF
         </button>
 
         <!-- Status Indicator -->
@@ -44,23 +38,39 @@
     </div>
 
     <script>
+        // Set this to the exact name of your empty PDF file located in the same directory
+        const DEFAULT_PDF_URL = 'census empty A3_3.pdf';
+
         async function processAndMerge() {
-            const pdfInput = document.getElementById('pdfFile');
             const imageInput = document.getElementById('imageFile');
             const rotationSelect = document.getElementById('rotationSelect');
             const statusText = document.getElementById('statusText');
             const btn = document.getElementById('processBtn');
 
-            if (!pdfInput.files.length || !imageInput.files.length) {
-                alert('Please upload both the A3 PDF form and the map image first!');
+            if (!imageInput.files.length) {
+                alert('Please upload the map image first!');
                 return;
             }
 
             try {
                 btn.disabled = true;
-                statusText.textContent = 'Processing files...';
+                statusText.textContent = 'Fetching default A3 PDF template...';
 
-                const pdfArrayBuffer = await pdfInput.files[0].arrayBuffer();
+                // Fetch the default empty PDF
+                let pdfArrayBuffer;
+                try {
+                    const response = await fetch(DEFAULT_PDF_URL);
+                    if (!response.ok) throw new Error("Could not load PDF");
+                    pdfArrayBuffer = await response.arrayBuffer();
+                } catch (e) {
+                    alert("Error: Could not load the default PDF. Make sure '" + DEFAULT_PDF_URL + "' is in the same folder and you are running a local web server (e.g., Live Server).");
+                    statusText.textContent = 'Failed to fetch default PDF.';
+                    btn.disabled = false;
+                    return;
+                }
+
+                statusText.textContent = 'Processing image...';
+                
                 const imageFile = imageInput.files[0];
                 const rotationAngle = parseInt(rotationSelect.value);
 
@@ -103,15 +113,15 @@
                     bytes[i] = binaryString.charCodeAt(i);
                 }
 
-                statusText.textContent = 'Embedding full-size map into A3 layout box...';
+                statusText.textContent = 'Embedding and stretching to fill map box...';
 
                 const embeddedImage = await pdfDoc.embedJpg(bytes);
 
-                // Expanded dimensions to fill the entire blank box area edge-to-edge
-                const boxX = 30;
-                const boxY = 80;
-                const boxWidth = 780;
-                const boxHeight = 560;
+                // Precise coordinate boundary for edge-to-edge box fill
+                const boxX = 18;
+                const boxY = 48;
+                const boxWidth = 808;
+                const boxHeight = 615;
 
                 page.drawImage(embeddedImage, {
                     x: boxX,
@@ -126,15 +136,15 @@
                 const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = 'Census_2027_Full_Filled_Map.pdf';
+                link.download = 'Census_2027_Exact_Fit_Map.pdf';
                 link.click();
 
-                statusText.textContent = 'Done! Your expanded file has been downloaded successfully.';
+                statusText.textContent = 'Done! Your mapped PDF has been downloaded successfully.';
                 btn.disabled = false;
 
             } catch (error) {
                 console.error(error);
-                statusText.textContent = 'An error occurred during processing.';
+                statusText.textContent = 'An error occurred during processing. Check console for details.';
                 btn.disabled = false;
             }
         }
