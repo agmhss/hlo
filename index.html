@@ -8,8 +8,8 @@
 </head>
 <body class="bg-slate-50 font-sans min-h-screen p-6">
     <div class="max-w-xl mx-auto bg-white p-6 rounded-xl shadow-md border border-slate-200">
-        <h1 class="text-xl font-bold text-slate-800 mb-2">Census 2027 A3 Map Combiner</h1>
-        <p class="text-xs text-slate-500 mb-6">Upload the blank A3 PDF form and map image, adjust the map rotation so North points correctly upward, and generate the final aligned PDF.</p>
+        <h1 class="text-xl font-bold text-slate-800 mb-2">Census 2027 A3 Map Combiner (Full Fill)</h1>
+        <p class="text-xs text-slate-500 mb-6">Upload the blank A3 PDF form and map image, choose the correct rotation to point North upward, and generate the fully expanded map PDF.</p>
 
         <!-- Form Upload -->
         <div class="mb-4">
@@ -36,7 +36,7 @@
 
         <!-- Action Button -->
         <button onclick="processAndMerge()" id="processBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-md transition duration-200 shadow">
-            Generate Aligned Census PDF
+            Generate Fully Filled Census PDF
         </button>
 
         <!-- Status Indicator -->
@@ -64,12 +64,10 @@
                 const imageFile = imageInput.files[0];
                 const rotationAngle = parseInt(rotationSelect.value);
 
-                // Load PDF via pdf-lib
-                const { PDFDocument, degrees } = PDFLib;
+                const { PDFDocument } = PDFLib;
                 const pdfDoc = await PDFDocument.load(pdfArrayBuffer);
                 const page = pdfDoc.getPages()[0];
 
-                // Read image file into HTML Image element to handle orientation/rotation rendering cleanly via canvas
                 const imageUrl = URL.createObjectURL(imageFile);
                 const img = await new Promise((resolve, reject) => {
                     const imageObj = new Image();
@@ -78,7 +76,6 @@
                     imageObj.src = imageUrl;
                 });
 
-                // Draw onto an offscreen canvas with rotation applied so pixels are structurally oriented correctly
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
 
@@ -97,7 +94,6 @@
                 ctx.drawImage(img, -img.width / 2, -img.height / 2);
                 ctx.restore();
 
-                // Export canvas data to bytes
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
                 const base64Data = dataUrl.split(',')[1];
                 const binaryString = atob(base64Data);
@@ -107,15 +103,15 @@
                     bytes[i] = binaryString.charCodeAt(i);
                 }
 
-                statusText.textContent = 'Embedding aligned map into A3 layout box...';
+                statusText.textContent = 'Embedding full-size map into A3 layout box...';
 
                 const embeddedImage = await pdfDoc.embedJpg(bytes);
 
-                // Designated Landscape Box Coordinates mapping to the A3 form grid layout box
-                const boxX = 45;
-                const boxY = 130;
-                const boxWidth = 750;
-                const boxHeight = 470;
+                // Expanded dimensions to fill the entire blank box area edge-to-edge
+                const boxX = 30;
+                const boxY = 80;
+                const boxWidth = 780;
+                const boxHeight = 560;
 
                 page.drawImage(embeddedImage, {
                     x: boxX,
@@ -130,10 +126,10 @@
                 const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = 'Census_2027_Aligned_Map.pdf';
+                link.download = 'Census_2027_Full_Filled_Map.pdf';
                 link.click();
 
-                statusText.textContent = 'Done! Your aligned file has been downloaded successfully.';
+                statusText.textContent = 'Done! Your expanded file has been downloaded successfully.';
                 btn.disabled = false;
 
             } catch (error) {
