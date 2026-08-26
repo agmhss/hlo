@@ -3,33 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Census 2027 A3 Map Generator</title>
+    <title>Census 2027 Map Embedder - Precision Fit</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
 <body class="bg-slate-100 font-sans min-h-screen flex items-center justify-center p-4">
 
-    <div class="max-w-lg w-full bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
+    <div class="max-w-xl w-full bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
         <div class="border-b border-slate-200 pb-4 mb-6">
             <h1 class="text-2xl font-bold text-slate-800">Census 2027 Map Embedder</h1>
-            <p class="text-xs text-slate-500 mt-1">Upload the block area screenshot to generate the official A3 map sheet.</p>
+            <p class="text-sm text-slate-500 mt-1">Upload your map screenshot and adjust the dimensions for a perfect edge-to-edge fit inside the box.</p>
         </div>
 
-        <!-- Image Upload Area -->
+        <!-- Image Upload -->
         <div class="mb-5">
-            <label class="block text-sm font-semibold text-slate-700 mb-2">1. Upload Google Map Screenshot</label>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">1. Upload Map Screenshot</label>
             <input type="file" id="imageFile" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-300 rounded-lg p-1">
         </div>
 
         <!-- Orientation Selector -->
         <div class="mb-6">
-            <label class="block text-sm font-semibold text-slate-700 mb-2">2. Map Rotation (North Alignment)</label>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">2. Map Rotation (North Up)</label>
             <select id="rotationSelect" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-slate-50 font-medium text-slate-700 focus:ring-2 focus:ring-blue-500">
-                <option value="90" selected>90° Clockwise (Default - North Up)</option>
+                <option value="90" selected>90° Clockwise (Default)</option>
                 <option value="0">0° (No Rotation)</option>
                 <option value="180">180° Inverted</option>
-                <option value="270">270° Clockwise (90° Counter-Clockwise)</option>
+                <option value="270">270° Clockwise</option>
             </select>
+        </div>
+
+        <!-- Advanced Layout Controls -->
+        <div class="mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <label class="block text-sm font-semibold text-slate-700 mb-3">3. Precision Box Fitting (Points)</label>
+            <p class="text-xs text-slate-500 mb-3">Adjust these if the map overlaps text or leaves empty space. (0,0 is the bottom-left corner of the page).</p>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs font-medium text-slate-600">Left Position (X)</label>
+                    <input type="number" id="boxX" value="25" class="w-full p-2 border border-slate-300 rounded text-sm mt-1">
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-slate-600">Bottom Position (Y)</label>
+                    <input type="number" id="boxY" value="65" class="w-full p-2 border border-slate-300 rounded text-sm mt-1">
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-slate-600">Box Width</label>
+                    <input type="number" id="boxWidth" value="790" class="w-full p-2 border border-slate-300 rounded text-sm mt-1">
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-slate-600">Box Height</label>
+                    <input type="number" id="boxHeight" value="525" class="w-full p-2 border border-slate-300 rounded text-sm mt-1">
+                </div>
+            </div>
         </div>
 
         <!-- Action Button -->
@@ -42,7 +67,7 @@
     </div>
 
     <script>
-        // Name of the template PDF in the repository
+        // Ensure this matches the PDF file in your GitHub repo
         const TEMPLATE_PDF_PATH = './census_template.pdf';
 
         async function processAndMerge() {
@@ -50,6 +75,12 @@
             const rotationSelect = document.getElementById('rotationSelect');
             const statusText = document.getElementById('statusText');
             const btn = document.getElementById('processBtn');
+
+            // Get precision box coordinates from inputs
+            const boxX = parseFloat(document.getElementById('boxX').value);
+            const boxY = parseFloat(document.getElementById('boxY').value);
+            const boxWidth = parseFloat(document.getElementById('boxWidth').value);
+            const boxHeight = parseFloat(document.getElementById('boxHeight').value);
 
             if (!imageInput.files.length) {
                 alert('Please select a map screenshot first!');
@@ -61,10 +92,9 @@
                 btn.classList.add('opacity-50', 'cursor-not-allowed');
                 statusText.textContent = 'Loading base A3 PDF template...';
 
-                // Fetch template PDF from repo
                 const response = await fetch(TEMPLATE_PDF_PATH);
                 if (!response.ok) {
-                    throw new Error(`Failed to load ${TEMPLATE_PDF_PATH}. Ensure the file exists in the repository.`);
+                    throw new Error(`Failed to load PDF. Ensure 'census_template.pdf' is in the repository.`);
                 }
                 const pdfArrayBuffer = await response.arrayBuffer();
 
@@ -85,7 +115,6 @@
                     imageObj.src = imageUrl;
                 });
 
-                // Canvas offscreen rotation
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
 
@@ -104,7 +133,6 @@
                 ctx.drawImage(img, -img.width / 2, -img.height / 2);
                 ctx.restore();
 
-                // Convert canvas to image bytes
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
                 const base64Data = dataUrl.split(',')[1];
                 const binaryString = atob(base64Data);
@@ -118,12 +146,7 @@
 
                 const embeddedImage = await pdfDoc.embedJpg(bytes);
 
-                // Exact full-frame stretch coordinates for the A3 form box
-                const boxX = 18;
-                const boxY = 48;
-                const boxWidth = 808;
-                const boxHeight = 615;
-
+                // Draw the image exactly where the user specified
                 page.drawImage(embeddedImage, {
                     x: boxX,
                     y: boxY,
