@@ -3,173 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Census 2027 Map Embedder - Precision Fit</title>
+    <title>Census 2027 Pro Map Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
 <body class="bg-slate-100 font-sans min-h-screen flex items-center justify-center p-4">
 
-    <div class="max-w-xl w-full bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
+    <div class="max-w-2xl w-full bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
         <div class="border-b border-slate-200 pb-4 mb-6">
-            <h1 class="text-2xl font-bold text-slate-800">Census 2027 Map Embedder</h1>
-            <p class="text-sm text-slate-500 mt-1">Upload your map screenshot and adjust the dimensions for a perfect edge-to-edge fit inside the box.</p>
+            <h1 class="text-2xl font-bold text-slate-800">Census 2027 Pro Map Generator</h1>
+            <p class="text-sm text-slate-500 mt-1">Upload a map screenshot, extract the drawn sketch, and embed it precisely into the A3 PDF.</p>
         </div>
 
-        <!-- Image Upload -->
-        <div class="mb-5">
-            <label class="block text-sm font-semibold text-slate-700 mb-2">1. Upload Map Screenshot</label>
-            <input type="file" id="imageFile" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-300 rounded-lg p-1">
-        </div>
-
-        <!-- Orientation Selector -->
-        <div class="mb-6">
-            <label class="block text-sm font-semibold text-slate-700 mb-2">2. Map Rotation (North Up)</label>
-            <select id="rotationSelect" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-slate-50 font-medium text-slate-700 focus:ring-2 focus:ring-blue-500">
-                <option value="90" selected>90° Clockwise (Default)</option>
-                <option value="0">0° (No Rotation)</option>
-                <option value="180">180° Inverted</option>
-                <option value="270">270° Clockwise</option>
-            </select>
-        </div>
-
-        <!-- Advanced Layout Controls -->
-        <div class="mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
-            <label class="block text-sm font-semibold text-slate-700 mb-3">3. Precision Box Fitting (Points)</label>
-            <p class="text-xs text-slate-500 mb-3">Adjust these if the map overlaps text or leaves empty space. (0,0 is the bottom-left corner of the page).</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="text-xs font-medium text-slate-600">Left Position (X)</label>
-                    <input type="number" id="boxX" value="25" class="w-full p-2 border border-slate-300 rounded text-sm mt-1">
+            <!-- Left Column: Settings -->
+            <div>
+                <!-- Image Upload -->
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">1. Upload Map Image</label>
+                    <input type="file" id="imageInput" accept="image/*" class="w-full text-sm text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-300 rounded-lg p-1">
                 </div>
-                <div>
-                    <label class="text-xs font-medium text-slate-600">Bottom Position (Y)</label>
-                    <input type="number" id="boxY" value="65" class="w-full p-2 border border-slate-300 rounded text-sm mt-1">
+
+                <!-- Sketch Extractor Toggle & Slider -->
+                <div class="mb-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <label class="flex items-center space-x-2 cursor-pointer mb-2">
+                        <input type="checkbox" id="extractToggle" class="w-4 h-4 text-blue-600 rounded" checked>
+                        <span class="text-sm font-semibold text-slate-700">Extract Sketch (Remove Terrain)</span>
+                    </label>
+                    <div id="sliderContainer">
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Sensitivity Slider</label>
+                        <input type="range" id="thresholdSlider" min="100" max="255" value="180" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
                 </div>
-                <div>
-                    <label class="text-xs font-medium text-slate-600">Box Width</label>
-                    <input type="number" id="boxWidth" value="790" class="w-full p-2 border border-slate-300 rounded text-sm mt-1">
+
+                <!-- Orientation Selector -->
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">2. Map Rotation (North Up)</label>
+                    <select id="rotationSelect" class="w-full p-2 border border-slate-300 rounded-lg text-sm bg-slate-50 font-medium text-slate-700">
+                        <option value="90" selected>90° Clockwise (Default)</option>
+                        <option value="0">0° (No Rotation)</option>
+                        <option value="180">180° Inverted</option>
+                        <option value="270">270° Clockwise</option>
+                    </select>
                 </div>
-                <div>
-                    <label class="text-xs font-medium text-slate-600">Box Height</label>
-                    <input type="number" id="boxHeight" value="525" class="w-full p-2 border border-slate-300 rounded text-sm mt-1">
+
+                <!-- Layout Controls -->
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">3. Layout Positioning</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[10px] uppercase font-bold text-slate-500">Left (X)</label>
+                            <input type="number" id="boxX" value="25" class="w-full p-1.5 border border-slate-300 rounded text-sm">
+                        </div>
+                        <div>
+                            <label class="text-[10px] uppercase font-bold text-slate-500">Bottom (Y)</label>
+                            <input type="number" id="boxY" value="65" class="w-full p-1.5 border border-slate-300 rounded text-sm">
+                        </div>
+                        <div>
+                            <label class="text-[10px] uppercase font-bold text-slate-500">Width</label>
+                            <input type="number" id="boxWidth" value="790" class="w-full p-1.5 border border-slate-300 rounded text-sm">
+                        </div>
+                        <div>
+                            <label class="text-[10px] uppercase font-bold text-slate-500">Height</label>
+                            <input type="number" id="boxHeight" value="525" class="w-full p-1.5 border border-slate-300 rounded text-sm">
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <!-- Right Column: Preview & Action -->
+            <div class="flex flex-col">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Live Preview</label>
+                <div class="flex-grow border border-slate-300 bg-slate-50 rounded-lg overflow-hidden flex justify-center items-center relative min-h-[200px] mb-4">
+                    <canvas id="previewCanvas" class="max-w-full max-h-[250px] hidden"></canvas>
+                    <p id="placeholder" class="text-slate-400 text-sm absolute">Upload image to preview</p>
+                </div>
+
+                <button onclick="generatePDF()" id="processBtn" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold py-3 px-4 rounded-xl transition duration-150 shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                    Generate Final A3 PDF
+                </button>
+                <p id="statusText" class="text-center text-xs font-medium text-slate-600 mt-3 h-4"></p>
+            </div>
         </div>
-
-        <!-- Action Button -->
-        <button onclick="processAndMerge()" id="processBtn" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold py-3 px-4 rounded-xl transition duration-150 shadow-md">
-            Generate & Download A3 PDF
-        </button>
-
-        <!-- Status Message -->
-        <p id="statusText" class="text-center text-xs font-medium text-slate-600 mt-4"></p>
     </div>
 
     <script>
-        // Ensure this matches the PDF file in your GitHub repo
+        // Ensure this matches your template PDF in the repository
         const TEMPLATE_PDF_PATH = './census_template.pdf';
 
-        async function processAndMerge() {
-            const imageInput = document.getElementById('imageFile');
-            const rotationSelect = document.getElementById('rotationSelect');
-            const statusText = document.getElementById('statusText');
-            const btn = document.getElementById('processBtn');
+        const imageInput = document.getElementById('imageInput');
+        const extractToggle = document.getElementById('extractToggle');
+        const thresholdSlider = document.getElementById('thresholdSlider');
+        const sliderContainer = document.getElementById('sliderContainer');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const ctx = previewCanvas.getContext('2d', { willReadFrequently: true });
+        const placeholder = document.getElementById('placeholder');
+        
+        let originalImg = new Image();
 
-            // Get precision box coordinates from inputs
+        // UI Listeners for Live Preview
+        imageInput.addEventListener('change', handleImageUpload);
+        extractToggle.addEventListener('change', () => {
+            sliderContainer.style.opacity = extractToggle.checked ? '1' : '0.4';
+            sliderContainer.style.pointerEvents = extractToggle.checked ? 'auto' : 'none';
+            updatePreview();
+        });
+        thresholdSlider.addEventListener('input', updatePreview);
+
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                originalImg.onload = () => {
+                    previewCanvas.width = originalImg.width;
+                    previewCanvas.height = originalImg.height;
+                    placeholder.classList.add('hidden');
+                    previewCanvas.classList.remove('hidden');
+                    updatePreview();
+                }
+                originalImg.src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function updatePreview() {
+            if (!originalImg.src) return;
+
+            // Draw original
+            ctx.drawImage(originalImg, 0, 0);
+
+            if (extractToggle.checked) {
+                const imageData = ctx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
+                const data = imageData.data;
+                const threshold = parseInt(thresholdSlider.value);
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i+1];
+                    const b = data[i+2];
+                    const brightness = (r + g + b) / 3;
+
+                    if (brightness > threshold) {
+                        data[i] = 0; data[i+1] = 0; data[i+2] = 0; // Black lines
+                    } else {
+                        data[i] = 255; data[i+1] = 255; data[i+2] = 255; // White background
+                    }
+                }
+                ctx.putImageData(imageData, 0, 0);
+            }
+        }
+
+        async function generatePDF() {
+            if (!originalImg.src) {
+                alert('Please upload a map image first!');
+                return;
+            }
+
+            const btn = document.getElementById('processBtn');
+            const statusText = document.getElementById('statusText');
+            const rotationAngle = parseInt(document.getElementById('rotationSelect').value);
             const boxX = parseFloat(document.getElementById('boxX').value);
             const boxY = parseFloat(document.getElementById('boxY').value);
             const boxWidth = parseFloat(document.getElementById('boxWidth').value);
             const boxHeight = parseFloat(document.getElementById('boxHeight').value);
 
-            if (!imageInput.files.length) {
-                alert('Please select a map screenshot first!');
-                return;
-            }
-
             try {
                 btn.disabled = true;
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
-                statusText.textContent = 'Loading base A3 PDF template...';
+                statusText.textContent = 'Fetching template PDF...';
 
                 const response = await fetch(TEMPLATE_PDF_PATH);
-                if (!response.ok) {
-                    throw new Error(`Failed to load PDF. Ensure 'census_template.pdf' is in the repository.`);
-                }
+                if (!response.ok) throw new Error("Could not load PDF template.");
                 const pdfArrayBuffer = await response.arrayBuffer();
 
-                statusText.textContent = 'Processing and rotating image...';
+                statusText.textContent = 'Rotating and formatting image...';
+
+                // Rotate the image generated from the preview canvas
+                const offscreenCanvas = document.createElement('canvas');
+                const offCtx = offscreenCanvas.getContext('2d');
                 
-                const imageFile = imageInput.files[0];
-                const rotationAngle = parseInt(rotationSelect.value);
+                if (rotationAngle === 90 || rotationAngle === 270) {
+                    offscreenCanvas.width = previewCanvas.height;
+                    offscreenCanvas.height = previewCanvas.width;
+                } else {
+                    offscreenCanvas.width = previewCanvas.width;
+                    offscreenCanvas.height = previewCanvas.height;
+                }
+
+                offCtx.translate(offscreenCanvas.width / 2, offscreenCanvas.height / 2);
+                offCtx.rotate((rotationAngle * Math.PI) / 180);
+                offCtx.drawImage(previewCanvas, -previewCanvas.width / 2, -previewCanvas.height / 2);
+
+                const base64Data = offscreenCanvas.toDataURL('image/jpeg', 0.95).split(',')[1];
+                const binaryString = atob(base64Data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+
+                statusText.textContent = 'Embedding into PDF...';
 
                 const { PDFDocument } = PDFLib;
                 const pdfDoc = await PDFDocument.load(pdfArrayBuffer);
                 const page = pdfDoc.getPages()[0];
-
-                const imageUrl = URL.createObjectURL(imageFile);
-                const img = await new Promise((resolve, reject) => {
-                    const imageObj = new Image();
-                    imageObj.onload = () => resolve(imageObj);
-                    imageObj.onerror = reject;
-                    imageObj.src = imageUrl;
-                });
-
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-
-                if (rotationAngle === 90 || rotationAngle === 270) {
-                    canvas.width = img.height;
-                    canvas.height = img.width;
-                } else {
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                }
-
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.save();
-                ctx.translate(canvas.width / 2, canvas.height / 2);
-                ctx.rotate((rotationAngle * Math.PI) / 180);
-                ctx.drawImage(img, -img.width / 2, -img.height / 2);
-                ctx.restore();
-
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-                const base64Data = dataUrl.split(',')[1];
-                const binaryString = atob(base64Data);
-                const len = binaryString.length;
-                const bytes = new Uint8Array(len);
-                for (let i = 0; i < len; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-
-                statusText.textContent = 'Fitting map neatly into box area...';
-
                 const embeddedImage = await pdfDoc.embedJpg(bytes);
 
-                // Draw the image exactly where the user specified
-                page.drawImage(embeddedImage, {
-                    x: boxX,
-                    y: boxY,
-                    width: boxWidth,
-                    height: boxHeight,
-                });
+                page.drawImage(embeddedImage, { x: boxX, y: boxY, width: boxWidth, height: boxHeight });
 
-                statusText.textContent = 'Generating completed document...';
+                statusText.textContent = 'Downloading...';
 
                 const modifiedPdfBytes = await pdfDoc.save();
                 const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = 'Census_2027_Completed_Map.pdf';
+                link.download = 'Census_2027_Pro_Map.pdf';
                 link.click();
 
-                statusText.textContent = 'Download complete!';
+                statusText.textContent = 'Success!';
             } catch (error) {
                 console.error(error);
-                statusText.textContent = error.message || 'An error occurred during generation.';
+                statusText.textContent = 'Error: ' + error.message;
             } finally {
                 btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         }
     </script>
