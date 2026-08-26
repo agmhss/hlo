@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Census 2027 Pro Map Generator</title>
+    <title>Census 2027 Pro Map Generator - Advanced Filter</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
@@ -12,7 +12,7 @@
     <div class="max-w-2xl w-full bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
         <div class="border-b border-slate-200 pb-4 mb-6">
             <h1 class="text-2xl font-bold text-slate-800">Census 2027 Pro Map Generator</h1>
-            <p class="text-sm text-slate-500 mt-1">Upload a map screenshot, extract the drawn sketch, and embed it precisely into the A3 PDF.</p>
+            <p class="text-sm text-slate-500 mt-1">Upload a map, extract pure roads by removing terrain, buildings, and text, and embed it into the A3 PDF.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -25,15 +25,23 @@
                     <input type="file" id="imageInput" accept="image/*" class="w-full text-sm text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-300 rounded-lg p-1">
                 </div>
 
-                <!-- Sketch Extractor Toggle & Slider -->
+                <!-- Sketch Extractor & Advanced Filters -->
                 <div class="mb-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <label class="flex items-center space-x-2 cursor-pointer mb-2">
+                    <label class="flex items-center space-x-2 cursor-pointer mb-3">
                         <input type="checkbox" id="extractToggle" class="w-4 h-4 text-blue-600 rounded" checked>
-                        <span class="text-sm font-semibold text-slate-700">Extract Sketch (Remove Terrain)</span>
+                        <span class="text-sm font-semibold text-slate-700">Extract Sketch (Roads Only)</span>
                     </label>
-                    <div id="sliderContainer">
-                        <label class="block text-xs font-medium text-slate-600 mb-1">Sensitivity Slider</label>
-                        <input type="range" id="thresholdSlider" min="100" max="255" value="180" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                    
+                    <div id="sliderContainer" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">1. Base Detection Sensitivity</label>
+                            <input type="range" id="thresholdSlider" min="100" max="255" value="180" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">2. Text & Building Remover (Area Filter)</label>
+                            <input type="range" id="noiseSlider" min="0" max="1500" value="300" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                            <p class="text-[10px] text-slate-500 mt-1 leading-tight">Increase this to erase larger disconnected text blocks and buildings. Decrease if small footpaths disappear.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -54,19 +62,19 @@
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="text-[10px] uppercase font-bold text-slate-500">Left (X)</label>
-                            <input type="number" id="boxX" value="20" class="w-full p-1.5 border border-slate-300 rounded text-sm">
+                            <input type="number" id="boxX" value="25" class="w-full p-1.5 border border-slate-300 rounded text-sm">
                         </div>
                         <div>
                             <label class="text-[10px] uppercase font-bold text-slate-500">Bottom (Y)</label>
-                            <input type="number" id="boxY" value="55" class="w-full p-1.5 border border-slate-300 rounded text-sm">
+                            <input type="number" id="boxY" value="65" class="w-full p-1.5 border border-slate-300 rounded text-sm">
                         </div>
                         <div>
                             <label class="text-[10px] uppercase font-bold text-slate-500">Width</label>
-                            <input type="number" id="boxWidth" value="650" class="w-full p-1.5 border border-slate-300 rounded text-sm">
+                            <input type="number" id="boxWidth" value="790" class="w-full p-1.5 border border-slate-300 rounded text-sm">
                         </div>
                         <div>
                             <label class="text-[10px] uppercase font-bold text-slate-500">Height</label>
-                            <input type="number" id="boxHeight" value="850" class="w-full p-1.5 border border-slate-300 rounded text-sm">
+                            <input type="number" id="boxHeight" value="525" class="w-full p-1.5 border border-slate-300 rounded text-sm">
                         </div>
                     </div>
                 </div>
@@ -76,7 +84,7 @@
             <div class="flex flex-col">
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Live Preview</label>
                 <div class="flex-grow border border-slate-300 bg-slate-50 rounded-lg overflow-hidden flex justify-center items-center relative min-h-[200px] mb-4">
-                    <canvas id="previewCanvas" class="max-w-full max-h-[250px] hidden"></canvas>
+                    <canvas id="previewCanvas" class="max-w-full max-h-[300px] hidden"></canvas>
                     <p id="placeholder" class="text-slate-400 text-sm absolute">Upload image to preview</p>
                 </div>
 
@@ -95,21 +103,31 @@
         const imageInput = document.getElementById('imageInput');
         const extractToggle = document.getElementById('extractToggle');
         const thresholdSlider = document.getElementById('thresholdSlider');
+        const noiseSlider = document.getElementById('noiseSlider');
         const sliderContainer = document.getElementById('sliderContainer');
         const previewCanvas = document.getElementById('previewCanvas');
         const ctx = previewCanvas.getContext('2d', { willReadFrequently: true });
         const placeholder = document.getElementById('placeholder');
         
         let originalImg = new Image();
+        let updateTimeout; // For debouncing the heavy noise filter
 
-        // UI Listeners for Live Preview
+        // UI Listeners
         imageInput.addEventListener('change', handleImageUpload);
         extractToggle.addEventListener('change', () => {
             sliderContainer.style.opacity = extractToggle.checked ? '1' : '0.4';
             sliderContainer.style.pointerEvents = extractToggle.checked ? 'auto' : 'none';
-            updatePreview();
+            triggerUpdate();
         });
-        thresholdSlider.addEventListener('input', updatePreview);
+        
+        // Use debounce for sliders so we don't freeze the browser on fast sliding
+        thresholdSlider.addEventListener('input', triggerUpdate);
+        noiseSlider.addEventListener('input', triggerUpdate);
+
+        function triggerUpdate() {
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(updatePreview, 50); // 50ms delay
+        }
 
         function handleImageUpload(e) {
             const file = e.target.files[0];
@@ -136,22 +154,83 @@
             ctx.drawImage(originalImg, 0, 0);
 
             if (extractToggle.checked) {
-                const imageData = ctx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
+                const width = previewCanvas.width;
+                const height = previewCanvas.height;
+                const imageData = ctx.getImageData(0, 0, width, height);
                 const data = imageData.data;
+                
                 const threshold = parseInt(thresholdSlider.value);
+                const minArea = parseInt(noiseSlider.value);
 
+                // Step 1: Base Brightness Thresholding
                 for (let i = 0; i < data.length; i += 4) {
-                    const r = data[i];
-                    const g = data[i+1];
-                    const b = data[i+2];
+                    const r = data[i], g = data[i+1], b = data[i+2];
                     const brightness = (r + g + b) / 3;
 
                     if (brightness > threshold) {
-                        data[i] = 0; data[i+1] = 0; data[i+2] = 0; // Black lines
+                        data[i] = 0; data[i+1] = 0; data[i+2] = 0; // Turn black
                     } else {
-                        data[i] = 255; data[i+1] = 255; data[i+2] = 255; // White background
+                        data[i] = 255; data[i+1] = 255; data[i+2] = 255; // Turn white
                     }
                 }
+
+                // Step 2: Advanced Noise Removal (Connected Component Labeling)
+                if (minArea > 0) {
+                    // Pre-allocate typed arrays for blazing fast BFS iteration
+                    const visited = new Uint8Array(width * height);
+                    const queue = new Int32Array(width * height);
+                    const component = new Int32Array(width * height);
+
+                    for (let i = 0; i < width * height; i++) {
+                        // If pixel is black and not visited yet
+                        if (data[i * 4] === 0 && visited[i] === 0) {
+                            let head = 0, tail = 0, compTail = 0;
+                            
+                            queue[tail++] = i;
+                            visited[i] = 1;
+
+                            // Fast Breadth-First Search to find the whole shape
+                            while (head < tail) {
+                                let curr = queue[head++];
+                                component[compTail++] = curr;
+
+                                let cy = Math.floor(curr / width);
+                                let cx = curr % width;
+
+                                // Check 8 neighboring pixels
+                                for (let dy = -1; dy <= 1; dy++) {
+                                    for (let dx = -1; dx <= 1; dx++) {
+                                        if (dx === 0 && dy === 0) continue;
+                                        
+                                        let nx = cx + dx;
+                                        let ny = cy + dy;
+
+                                        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                            let nIdx = ny * width + nx;
+                                            // If neighbor is black and unvisited, add to queue
+                                            if (data[nIdx * 4] === 0 && visited[nIdx] === 0) {
+                                                visited[nIdx] = 1;
+                                                queue[tail++] = nIdx;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Erase the shape (paint white) if it's smaller than the noise threshold
+                            if (compTail < minArea) {
+                                for (let k = 0; k < compTail; k++) {
+                                    let idx = component[k] * 4;
+                                    data[idx] = 255;     // R
+                                    data[idx + 1] = 255; // G
+                                    data[idx + 2] = 255; // B
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Apply changes to canvas
                 ctx.putImageData(imageData, 0, 0);
             }
         }
@@ -180,7 +259,6 @@
 
                 statusText.textContent = 'Rotating and formatting image...';
 
-                // Rotate the image generated from the preview canvas
                 const offscreenCanvas = document.createElement('canvas');
                 const offCtx = offscreenCanvas.getContext('2d');
                 
