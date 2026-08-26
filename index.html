@@ -2,44 +2,48 @@
 <html lang="ta">
 <head>
     <meta charset="UTF-8">
-    <title>Census A3 Map Combiner - Auto PDF</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Census 2027 A3 Map Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
-<body class="bg-slate-50 font-sans min-h-screen p-6">
-    <div class="max-w-xl mx-auto bg-white p-6 rounded-xl shadow-md border border-slate-200">
-        <h1 class="text-xl font-bold text-slate-800 mb-2">Census 2027 A3 Map Combiner</h1>
-        <p class="text-xs text-slate-500 mb-6">Upload your map screenshot. The app will automatically embed it into the default A3 census form and stretch it to perfectly fit the map box.</p>
+<body class="bg-slate-100 font-sans min-h-screen flex items-center justify-center p-4">
 
-        <!-- Image Upload -->
-        <div class="mb-4">
-            <label class="block text-sm font-medium text-slate-700 mb-1">1. Select Map Image (Screenshot)</label>
-            <input type="file" id="imageFile" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer border border-slate-300 rounded-md">
+    <div class="max-w-lg w-full bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
+        <div class="border-b border-slate-200 pb-4 mb-6">
+            <h1 class="text-2xl font-bold text-slate-800">Census 2027 Map Embedder</h1>
+            <p class="text-xs text-slate-500 mt-1">Upload the block area screenshot to generate the official A3 map sheet.</p>
         </div>
 
-        <!-- Rotation Selector for North alignment -->
+        <!-- Image Upload Area -->
+        <div class="mb-5">
+            <label class="block text-sm font-semibold text-slate-700 mb-2">1. Upload Google Map Screenshot</label>
+            <input type="file" id="imageFile" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-300 rounded-lg p-1">
+        </div>
+
+        <!-- Orientation Selector -->
         <div class="mb-6">
-            <label class="block text-sm font-medium text-slate-700 mb-1">2. Map Rotation</label>
-            <select id="rotationSelect" class="w-full p-2 border border-slate-300 rounded-md text-sm bg-white">
+            <label class="block text-sm font-semibold text-slate-700 mb-2">2. Map Rotation (North Alignment)</label>
+            <select id="rotationSelect" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-slate-50 font-medium text-slate-700 focus:ring-2 focus:ring-blue-500">
+                <option value="90" selected>90° Clockwise (Default - North Up)</option>
                 <option value="0">0° (No Rotation)</option>
-                <option value="90" selected>90° Clockwise (Default)</option>
-                <option value="180">180° Upside Down</option>
-                <option value="270">270° Clockwise</option>
+                <option value="180">180° Inverted</option>
+                <option value="270">270° Clockwise (90° Counter-Clockwise)</option>
             </select>
         </div>
 
         <!-- Action Button -->
-        <button onclick="processAndMerge()" id="processBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-md transition duration-200 shadow">
-            Generate Exact-Fit Census PDF
+        <button onclick="processAndMerge()" id="processBtn" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold py-3 px-4 rounded-xl transition duration-150 shadow-md">
+            Generate & Download A3 PDF
         </button>
 
-        <!-- Status Indicator -->
-        <p id="statusText" class="text-center text-xs text-slate-600 mt-4"></p>
+        <!-- Status Message -->
+        <p id="statusText" class="text-center text-xs font-medium text-slate-600 mt-4"></p>
     </div>
 
     <script>
-        // Set this to the exact name of your empty PDF file located in the same directory
-        const DEFAULT_PDF_URL = 'census empty A3_3.pdf';
+        // Name of the template PDF in the repository
+        const TEMPLATE_PDF_PATH = './census_template.pdf';
 
         async function processAndMerge() {
             const imageInput = document.getElementById('imageFile');
@@ -48,28 +52,23 @@
             const btn = document.getElementById('processBtn');
 
             if (!imageInput.files.length) {
-                alert('Please upload the map image first!');
+                alert('Please select a map screenshot first!');
                 return;
             }
 
             try {
                 btn.disabled = true;
-                statusText.textContent = 'Fetching default A3 PDF template...';
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                statusText.textContent = 'Loading base A3 PDF template...';
 
-                // Fetch the default empty PDF
-                let pdfArrayBuffer;
-                try {
-                    const response = await fetch(DEFAULT_PDF_URL);
-                    if (!response.ok) throw new Error("Could not load PDF");
-                    pdfArrayBuffer = await response.arrayBuffer();
-                } catch (e) {
-                    alert("Error: Could not load the default PDF. Make sure '" + DEFAULT_PDF_URL + "' is in the same folder and you are running a local web server (e.g., Live Server).");
-                    statusText.textContent = 'Failed to fetch default PDF.';
-                    btn.disabled = false;
-                    return;
+                // Fetch template PDF from repo
+                const response = await fetch(TEMPLATE_PDF_PATH);
+                if (!response.ok) {
+                    throw new Error(`Failed to load ${TEMPLATE_PDF_PATH}. Ensure the file exists in the repository.`);
                 }
+                const pdfArrayBuffer = await response.arrayBuffer();
 
-                statusText.textContent = 'Processing image...';
+                statusText.textContent = 'Processing and rotating image...';
                 
                 const imageFile = imageInput.files[0];
                 const rotationAngle = parseInt(rotationSelect.value);
@@ -86,6 +85,7 @@
                     imageObj.src = imageUrl;
                 });
 
+                // Canvas offscreen rotation
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
 
@@ -104,6 +104,7 @@
                 ctx.drawImage(img, -img.width / 2, -img.height / 2);
                 ctx.restore();
 
+                // Convert canvas to image bytes
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
                 const base64Data = dataUrl.split(',')[1];
                 const binaryString = atob(base64Data);
@@ -113,11 +114,11 @@
                     bytes[i] = binaryString.charCodeAt(i);
                 }
 
-                statusText.textContent = 'Embedding and stretching to fill map box...';
+                statusText.textContent = 'Fitting map neatly into box area...';
 
                 const embeddedImage = await pdfDoc.embedJpg(bytes);
 
-                // Precise coordinate boundary for edge-to-edge box fill
+                // Exact full-frame stretch coordinates for the A3 form box
                 const boxX = 18;
                 const boxY = 48;
                 const boxWidth = 808;
@@ -130,22 +131,22 @@
                     height: boxHeight,
                 });
 
-                statusText.textContent = 'Saving finalized PDF...';
+                statusText.textContent = 'Generating completed document...';
 
                 const modifiedPdfBytes = await pdfDoc.save();
                 const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = 'Census_2027_Exact_Fit_Map.pdf';
+                link.download = 'Census_2027_Completed_Map.pdf';
                 link.click();
 
-                statusText.textContent = 'Done! Your mapped PDF has been downloaded successfully.';
-                btn.disabled = false;
-
+                statusText.textContent = 'Download complete!';
             } catch (error) {
                 console.error(error);
-                statusText.textContent = 'An error occurred during processing. Check console for details.';
+                statusText.textContent = error.message || 'An error occurred during generation.';
+            } finally {
                 btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         }
     </script>
