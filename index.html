@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Census 2027 Pro Map Generator - Ink Saver</title>
+    <title>Census 2027 Pro Map Generator - Smart Extractor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
@@ -12,7 +12,7 @@
     <div class="max-w-2xl w-full bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
         <div class="border-b border-slate-200 pb-4 mb-6">
             <h1 class="text-2xl font-bold text-slate-800">Census 2027 Pro Map Generator</h1>
-            <p class="text-sm text-slate-500 mt-1">Upload a map, extract pure roads, erase the outer black background to save ink, and embed into PDF.</p>
+            <p class="text-sm text-slate-500 mt-1">Magnifies the uploaded map to detect and isolate only the primary boundaries, roads, and streets.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -27,33 +27,28 @@
 
                 <!-- Sketch Extractor & Advanced Filters -->
                 <div class="mb-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <label class="flex items-center space-x-2 cursor-pointer mb-3">
+                    <label class="flex items-center space-x-2 cursor-pointer mb-3 border-b border-slate-200 pb-2">
                         <input type="checkbox" id="extractToggle" class="w-4 h-4 text-blue-600 rounded" checked>
-                        <span class="text-sm font-semibold text-slate-700">Extract Sketch (Roads Only)</span>
+                        <span class="text-sm font-semibold text-slate-700">Enable Smart Extraction</span>
                     </label>
                     
-                    <div id="sliderContainer" class="space-y-4">
+                    <div id="sliderContainer" class="space-y-4 pt-1">
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">Base Detection Sensitivity</label>
-                            <input type="range" id="thresholdSlider" min="100" max="255" value="180" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Road/Boundary Detection (Brightness)</label>
+                            <input type="range" id="thresholdSlider" min="100" max="255" value="165" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                            <p class="text-[9px] text-slate-500 mt-1 leading-tight">Filters out the dimmed outside area and background.</p>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">Text & Building Remover</label>
-                            <input type="range" id="noiseSlider" min="0" max="1500" value="300" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
-                        </div>
-                        <div class="pt-2 border-t border-slate-200">
-                            <label class="flex items-center space-x-2 cursor-pointer">
-                                <input type="checkbox" id="inkSaverToggle" class="w-4 h-4 text-green-600 rounded" checked>
-                                <span class="text-xs font-bold text-slate-700">Ink Saver (Erase Outer Black Area)</span>
-                            </label>
-                            <p class="text-[10px] text-slate-500 mt-1 leading-tight">Automatically removes the massive black blocks touching the edges of the image.</p>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Text & Number Remover (Size Filter)</label>
+                            <input type="range" id="noiseSlider" min="0" max="3000" value="800" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                            <p class="text-[9px] text-slate-500 mt-1 leading-tight">Erases disconnected text and small icons while preserving long continuous roads.</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Orientation Selector -->
                 <div class="mb-4">
-                    <label class="block text-sm font-semibold text-slate-700 mb-2">2. Map Rotation (North Up)</label>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">2. Map Rotation</label>
                     <select id="rotationSelect" class="w-full p-2 border border-slate-300 rounded-lg text-sm bg-slate-50 font-medium text-slate-700">
                         <option value="90" selected>90° Clockwise (Default)</option>
                         <option value="0">0° (No Rotation)</option>
@@ -62,25 +57,25 @@
                     </select>
                 </div>
 
-                <!-- Layout Controls -->
+                <!-- Layout Controls (Defaults Set) -->
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-slate-700 mb-2">3. Layout Positioning</label>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="text-[10px] uppercase font-bold text-slate-500">Left (X)</label>
-                            <input type="number" id="boxX" value="25" class="w-full p-1.5 border border-slate-300 rounded text-sm">
+                            <input type="number" id="boxX" value="25" class="w-full p-1.5 border border-slate-300 rounded text-sm bg-slate-50 font-semibold text-slate-800">
                         </div>
                         <div>
                             <label class="text-[10px] uppercase font-bold text-slate-500">Bottom (Y)</label>
-                            <input type="number" id="boxY" value="55" class="w-full p-1.5 border border-slate-300 rounded text-sm">
+                            <input type="number" id="boxY" value="55" class="w-full p-1.5 border border-slate-300 rounded text-sm bg-slate-50 font-semibold text-slate-800">
                         </div>
                         <div>
                             <label class="text-[10px] uppercase font-bold text-slate-500">Width</label>
-                            <input type="number" id="boxWidth" value="680" class="w-full p-1.5 border border-slate-300 rounded text-sm">
+                            <input type="number" id="boxWidth" value="680" class="w-full p-1.5 border border-slate-300 rounded text-sm bg-slate-50 font-semibold text-slate-800">
                         </div>
                         <div>
                             <label class="text-[10px] uppercase font-bold text-slate-500">Height</label>
-                            <input type="number" id="boxHeight" value="850" class="w-full p-1.5 border border-slate-300 rounded text-sm">
+                            <input type="number" id="boxHeight" value="850" class="w-full p-1.5 border border-slate-300 rounded text-sm bg-slate-50 font-semibold text-slate-800">
                         </div>
                     </div>
                 </div>
@@ -88,13 +83,13 @@
 
             <!-- Right Column: Preview & Action -->
             <div class="flex flex-col">
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Live Preview</label>
-                <div class="flex-grow border border-slate-300 bg-slate-50 rounded-lg overflow-hidden flex justify-center items-center relative min-h-[200px] mb-4">
-                    <canvas id="previewCanvas" class="max-w-full max-h-[300px] hidden border border-slate-200"></canvas>
-                    <p id="placeholder" class="text-slate-400 text-sm absolute">Upload image to preview</p>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Live Magnified Preview</label>
+                <div class="flex-grow border border-slate-300 bg-slate-50 rounded-lg overflow-hidden flex justify-center items-center relative min-h-[200px] mb-4 shadow-inner">
+                    <canvas id="previewCanvas" class="max-w-full max-h-[350px] hidden"></canvas>
+                    <p id="placeholder" class="text-slate-400 text-sm absolute">Upload map to preview</p>
                 </div>
 
-                <button onclick="generatePDF()" id="processBtn" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold py-3 px-4 rounded-xl transition duration-150 shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                <button onclick="generatePDF()" id="processBtn" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
                     Generate Final A3 PDF
                 </button>
                 <p id="statusText" class="text-center text-xs font-medium text-slate-600 mt-3 h-4"></p>
@@ -103,12 +98,13 @@
     </div>
 
     <script>
-        // Ensure this matches your template PDF in the repository
         const TEMPLATE_PDF_PATH = './census_template.pdf';
+        
+        // Processing Magnifier
+        const INTERNAL_SCALE = 2.0;
 
         const imageInput = document.getElementById('imageInput');
         const extractToggle = document.getElementById('extractToggle');
-        const inkSaverToggle = document.getElementById('inkSaverToggle');
         const thresholdSlider = document.getElementById('thresholdSlider');
         const noiseSlider = document.getElementById('noiseSlider');
         const sliderContainer = document.getElementById('sliderContainer');
@@ -119,14 +115,13 @@
         let originalImg = new Image();
         let updateTimeout;
 
-        // UI Listeners
         imageInput.addEventListener('change', handleImageUpload);
         extractToggle.addEventListener('change', () => {
             sliderContainer.style.opacity = extractToggle.checked ? '1' : '0.4';
             sliderContainer.style.pointerEvents = extractToggle.checked ? 'auto' : 'none';
             triggerUpdate();
         });
-        inkSaverToggle.addEventListener('change', triggerUpdate);
+        
         thresholdSlider.addEventListener('input', triggerUpdate);
         noiseSlider.addEventListener('input', triggerUpdate);
 
@@ -142,8 +137,9 @@
             const reader = new FileReader();
             reader.onload = (event) => {
                 originalImg.onload = () => {
-                    previewCanvas.width = originalImg.width;
-                    previewCanvas.height = originalImg.height;
+                    // Magnify canvas for high-precision detection
+                    previewCanvas.width = originalImg.width * INTERNAL_SCALE;
+                    previewCanvas.height = originalImg.height * INTERNAL_SCALE;
                     placeholder.classList.add('hidden');
                     previewCanvas.classList.remove('hidden');
                     updatePreview();
@@ -156,8 +152,8 @@
         function updatePreview() {
             if (!originalImg.src) return;
 
-            // Draw original
-            ctx.drawImage(originalImg, 0, 0);
+            // Draw magnified original
+            ctx.drawImage(originalImg, 0, 0, previewCanvas.width, previewCanvas.height);
 
             if (extractToggle.checked) {
                 const width = previewCanvas.width;
@@ -168,96 +164,70 @@
                 const threshold = parseInt(thresholdSlider.value);
                 const minArea = parseInt(noiseSlider.value);
 
-                // Step 1: Base Brightness Thresholding
+                // Step 1: Strict High-Brightness Threshold
+                // This targets the bright white lines and ignores the dimmed outside areas
                 for (let i = 0; i < data.length; i += 4) {
                     const r = data[i], g = data[i+1], b = data[i+2];
                     const brightness = (r + g + b) / 3;
 
                     if (brightness > threshold) {
-                        data[i] = 0; data[i+1] = 0; data[i+2] = 0; // Turn black
+                        data[i] = 0; data[i+1] = 0; data[i+2] = 0; // Turn roads/boundaries Black
                     } else {
-                        data[i] = 255; data[i+1] = 255; data[i+2] = 255; // Turn white
+                        data[i] = 255; data[i+1] = 255; data[i+2] = 255; // Turn everything else White
                     }
                 }
 
-                // Step 2: Advanced Noise Removal (Erase tiny details/text)
+                // Step 2: Advanced Area Filter (Wipes out text, icons, and scattered pixels)
                 if (minArea > 0) {
                     const visited = new Uint8Array(width * height);
                     const queue = new Int32Array(width * height);
                     const component = new Int32Array(width * height);
 
                     for (let i = 0; i < width * height; i++) {
+                        // If pixel is a black line and unvisited
                         if (data[i * 4] === 0 && visited[i] === 0) {
                             let head = 0, tail = 0, compTail = 0;
+                            
                             queue[tail++] = i;
                             visited[i] = 1;
 
+                            // Flood-fill to measure the continuous size of the line/shape
                             while (head < tail) {
                                 let curr = queue[head++];
                                 component[compTail++] = curr;
+
                                 let cy = Math.floor(curr / width);
                                 let cx = curr % width;
 
+                                // 8-way directional check
                                 for (let dy = -1; dy <= 1; dy++) {
                                     for (let dx = -1; dx <= 1; dx++) {
                                         if (dx === 0 && dy === 0) continue;
-                                        let nx = cx + dx, ny = cy + dy;
+                                        
+                                        let nx = cx + dx;
+                                        let ny = cy + dy;
+
                                         if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
                                             let nIdx = ny * width + nx;
                                             if (data[nIdx * 4] === 0 && visited[nIdx] === 0) {
-                                                visited[nIdx] = 1; queue[tail++] = nIdx;
+                                                visited[nIdx] = 1;
+                                                queue[tail++] = nIdx;
                                             }
                                         }
                                     }
                                 }
                             }
 
+                            // If the shape is smaller than the threshold, it's text/noise -> Erase it
                             if (compTail < minArea) {
                                 for (let k = 0; k < compTail; k++) {
                                     let idx = component[k] * 4;
-                                    data[idx] = 255; data[idx + 1] = 255; data[idx + 2] = 255; 
+                                    data[idx] = 255;     // R
+                                    data[idx + 1] = 255; // G
+                                    data[idx + 2] = 255; // B
                                 }
                             }
                         }
-                    }
-                }
-
-                // Step 3: Ink Saver (Erase outer boundary black area via Flood Fill)
-                if (inkSaverToggle.checked) {
-                    const edgeVisited = new Uint8Array(width * height);
-                    const edgeQueue = new Int32Array(width * height);
-                    let edgeHead = 0, edgeTail = 0;
-
-                    // Find all black pixels on the outer border
-                    for (let x = 0; x < width; x++) {
-                        if (data[x * 4] === 0) { edgeQueue[edgeTail++] = x; edgeVisited[x] = 1; }
-                        let bottomIdx = (height - 1) * width + x;
-                        if (data[bottomIdx * 4] === 0) { edgeQueue[edgeTail++] = bottomIdx; edgeVisited[bottomIdx] = 1; }
-                    }
-                    for (let y = 0; y < height; y++) {
-                        let leftIdx = y * width;
-                        if (data[leftIdx * 4] === 0 && edgeVisited[leftIdx] === 0) { edgeQueue[edgeTail++] = leftIdx; edgeVisited[leftIdx] = 1; }
-                        let rightIdx = y * width + (width - 1);
-                        if (data[rightIdx * 4] === 0 && edgeVisited[rightIdx] === 0) { edgeQueue[edgeTail++] = rightIdx; edgeVisited[rightIdx] = 1; }
-                    }
-
-                    // Erase everything connected to the borders
-                    while(edgeHead < edgeTail) {
-                        let curr = edgeQueue[edgeHead++];
-                        
-                        data[curr * 4] = 255;
-                        data[curr * 4 + 1] = 255;
-                        data[curr * 4 + 2] = 255;
-
-                        let cy = Math.floor(curr / width);
-                        let cx = curr % width;
-                        
-                        // Use 4-way direction to prevent erasing roads that touch diagonally
-                        let nIdx;
-                        if (cy > 0) { nIdx = curr - width; if (data[nIdx * 4] === 0 && edgeVisited[nIdx] === 0) { edgeVisited[nIdx] = 1; edgeQueue[edgeTail++] = nIdx; } } // Up
-                        if (cy < height - 1) { nIdx = curr + width; if (data[nIdx * 4] === 0 && edgeVisited[nIdx] === 0) { edgeVisited[nIdx] = 1; edgeQueue[edgeTail++] = nIdx; } } // Down
-                        if (cx > 0) { nIdx = curr - 1; if (data[nIdx * 4] === 0 && edgeVisited[nIdx] === 0) { edgeVisited[nIdx] = 1; edgeQueue[edgeTail++] = nIdx; } } // Left
-                        if (cx < width - 1) { nIdx = curr + 1; if (data[nIdx * 4] === 0 && edgeVisited[nIdx] === 0) { edgeVisited[nIdx] = 1; edgeQueue[edgeTail++] = nIdx; } } // Right
                     }
                 }
 
@@ -316,6 +286,7 @@
                 const page = pdfDoc.getPages()[0];
                 const embeddedImage = await pdfDoc.embedJpg(bytes);
 
+                // Employs the hardcoded requested dimensions
                 page.drawImage(embeddedImage, { x: boxX, y: boxY, width: boxWidth, height: boxHeight });
 
                 statusText.textContent = 'Downloading...';
@@ -324,10 +295,10 @@
                 const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = 'Census_2027_Pro_Map.pdf';
+                link.download = 'Census_2027_Final_Map.pdf';
                 link.click();
 
-                statusText.textContent = 'Success!';
+                statusText.textContent = 'Success! File Downloaded.';
             } catch (error) {
                 console.error(error);
                 statusText.textContent = 'Error: ' + error.message;
