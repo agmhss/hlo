@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Census 2027 - Advanced Pencil Engine</title>
+    <title>Census 2027 - Contour Pencil Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
@@ -12,7 +12,7 @@
     <div class="max-w-2xl w-full bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
         <div class="border-b border-slate-200 pb-4 mb-6">
             <h1 class="text-2xl font-bold text-slate-800">Census 2027 Pro Map Generator</h1>
-            <p class="text-sm text-slate-500 mt-1">Advanced tracing engine. Increase sliders for bolder, thicker pencil outlines.</p>
+            <p class="text-sm text-slate-500 mt-1">Smart Contour Tracing: Captures soft dirt roads and hollows them out into clean pencil outlines.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -29,24 +29,23 @@
                 <div class="mb-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <label class="flex items-center space-x-2 cursor-pointer mb-3 border-b border-slate-200 pb-2">
                         <input type="checkbox" id="extractToggle" class="w-4 h-4 text-blue-600 rounded" checked>
-                        <span class="text-sm font-semibold text-slate-700">Enable Pencil Tracing</span>
+                        <span class="text-sm font-semibold text-slate-700">Enable Contour Tracing</span>
                     </label>
                     
                     <div id="sliderContainer" class="space-y-4 pt-1">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Trace Intensity (More Lines)</label>
-                            <input type="range" id="intensitySlider" min="0" max="100" value="80" class="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer">
-                            <p class="text-[9px] text-slate-500 mt-1 leading-tight">Slide right to detect fainter paths and boundaries.</p>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Road Finder (Brightness)</label>
+                            <input type="range" id="brightnessSlider" min="100" max="230" value="145" class="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer">
+                            <p class="text-[9px] text-slate-500 mt-1 leading-tight">Slide LEFT to capture more faint streets. Slide RIGHT to erase fields.</p>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Stroke Thickness</label>
-                            <input type="range" id="thicknessSlider" min="1" max="4" value="2" class="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer">
-                            <p class="text-[9px] text-slate-500 mt-1 leading-tight">Slide right to make the pencil lines thicker and darker.</p>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Noise Cleaner (Erase Text)</label>
+                            <input type="range" id="noiseSlider" min="0" max="2000" value="500" class="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer">
+                            <p class="text-[9px] text-slate-500 mt-1 leading-tight">Slide right to erase disconnected text and small building blocks.</p>
                         </div>
                         <div class="border-t border-slate-200 pt-3">
-                            <label class="block text-xs font-medium text-slate-600 mb-1">Background Noise Ignore</label>
-                            <input type="range" id="brightnessSlider" min="50" max="220" value="145" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
-                            <p class="text-[9px] text-slate-500 mt-1 leading-tight">Slide right to ignore bright farm fields and isolate only pure white roads.</p>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Pencil Thickness</label>
+                            <input type="range" id="thicknessSlider" min="1" max="4" value="2" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
                         </div>
                     </div>
                 </div>
@@ -108,9 +107,9 @@
 
         const imageInput = document.getElementById('imageInput');
         const extractToggle = document.getElementById('extractToggle');
-        const intensitySlider = document.getElementById('intensitySlider');
-        const thicknessSlider = document.getElementById('thicknessSlider');
         const brightnessSlider = document.getElementById('brightnessSlider');
+        const noiseSlider = document.getElementById('noiseSlider');
+        const thicknessSlider = document.getElementById('thicknessSlider');
         const sliderContainer = document.getElementById('sliderContainer');
         const previewCanvas = document.getElementById('previewCanvas');
         const ctx = previewCanvas.getContext('2d', { willReadFrequently: true });
@@ -126,9 +125,9 @@
             triggerUpdate();
         });
         
-        intensitySlider.addEventListener('input', triggerUpdate);
-        thicknessSlider.addEventListener('input', triggerUpdate);
         brightnessSlider.addEventListener('input', triggerUpdate);
+        noiseSlider.addEventListener('input', triggerUpdate);
+        thicknessSlider.addEventListener('input', triggerUpdate);
 
         function triggerUpdate() {
             clearTimeout(updateTimeout);
@@ -165,56 +164,88 @@
                 const data = imageData.data;
                 const output = new Uint8ClampedArray(data.length);
                 
-                // Mathematics setup
-                // Inverting the intensity slider so moving Right = More Lines (Lower threshold requirement)
-                const intensity = parseInt(intensitySlider.value);
-                const edgeSensitivity = 120 - intensity; 
-                
-                const noiseIgnore = parseInt(brightnessSlider.value);
-                const thickness = parseInt(thicknessSlider.value) - 1; // 0=1px, 1=3px, 2=5px
+                const roadThreshold = parseInt(brightnessSlider.value);
+                const minArea = parseInt(noiseSlider.value);
+                const thickness = parseInt(thicknessSlider.value) - 1;
 
-                // Create a fast-access grayscale buffer & set canvas to solid white paper
-                const gray = new Uint8Array(width * height);
-                const edgeBuffer = new Uint8Array(width * height);
+                const binary = new Uint8Array(width * height);
+                const outline = new Uint8Array(width * height);
 
+                // Step 1: Detect Roads (Solid Blocks)
                 for (let i = 0; i < width * height; i++) {
-                    gray[i] = (data[i*4] + data[i*4+1] + data[i*4+2]) / 3;
+                    const bright = (data[i*4] + data[i*4+1] + data[i*4+2]) / 3;
+                    if (bright > roadThreshold) {
+                        binary[i] = 1; 
+                    }
+                    // Pre-fill output with white paper
                     output[i*4] = 255; 
                     output[i*4+1] = 255; 
                     output[i*4+2] = 255; 
                     output[i*4+3] = 255;
                 }
 
-                // Step 1: Detect absolute edges (identifying both sides of the road outline)
-                for (let y = 1; y < height - 1; y++) {
-                    for (let x = 1; x < width - 1; x++) {
-                        const i = y * width + x;
-                        
-                        // Ignore dark field areas entirely
-                        if (gray[i] > noiseIgnore) {
-                            // Absolute Laplacian math finds stark outlines
-                            const laplacian = Math.abs(
-                                4 * gray[i] 
-                                - gray[i - 1] 
-                                - gray[i + 1] 
-                                - gray[i - width] 
-                                - gray[i + width]
-                            );
-                            
-                            if (laplacian > edgeSensitivity) {
-                                edgeBuffer[i] = 1; // Mark this pixel as a true edge
+                // Step 2: Clean up Text & Noise (Connected Components)
+                if (minArea > 0) {
+                    const visited = new Uint8Array(width * height);
+                    const queue = new Int32Array(width * height);
+                    const component = new Int32Array(width * height);
+
+                    for (let i = 0; i < width * height; i++) {
+                        if (binary[i] === 1 && visited[i] === 0) {
+                            let head = 0, tail = 0;
+                            queue[tail++] = i;
+                            visited[i] = 1;
+
+                            while (head < tail) {
+                                let curr = queue[head++];
+                                component[tail - 1] = curr;
+                                let cy = Math.floor(curr / width);
+                                let cx = curr % width;
+
+                                for (let dy = -1; dy <= 1; dy++) {
+                                    for (let dx = -1; dx <= 1; dx++) {
+                                        if (dx === 0 && dy === 0) continue;
+                                        let nx = cx + dx, ny = cy + dy;
+                                        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                            let nIdx = ny * width + nx;
+                                            if (binary[nIdx] === 1 && visited[nIdx] === 0) {
+                                                visited[nIdx] = 1;
+                                                queue[tail++] = nIdx;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Erase small standalone blocks (like text/numbers)
+                            if (tail < minArea) {
+                                for (let k = 0; k < tail; k++) {
+                                    binary[component[k]] = 0;
+                                }
                             }
                         }
                     }
                 }
 
-                // Step 2: Draw the edges with requested Stroke Thickness
+                // Step 3: Contour Tracing (Hollow out the shapes for pencil effect)
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const i = y * width + x;
+                        if (binary[i] === 1) {
+                            // If a pixel touches the background, it's an edge
+                            if (binary[i-1] === 0 || binary[i+1] === 0 || binary[i-width] === 0 || binary[i+width] === 0) {
+                                outline[i] = 1;
+                            }
+                        }
+                    }
+                }
+
+                // Step 4: Draw Outline with requested Thickness
                 for (let y = 1; y < height - 1; y++) {
                     for (let x = 1; x < width - 1; x++) {
                         const i = y * width + x;
                         
-                        if (edgeBuffer[i] === 1) {
-                            // Apply dilation based on thickness slider
+                        if (outline[i] === 1) {
                             for(let dy = -thickness; dy <= thickness; dy++) {
                                 for(let dx = -thickness; dx <= thickness; dx++) {
                                     let nx = x + dx;
@@ -222,7 +253,7 @@
                                     
                                     if(nx >= 0 && nx < width && ny >= 0 && ny < height) {
                                         let ni = ny * width + nx;
-                                        output[ni*4] = 0;     // Draw solid black
+                                        output[ni*4] = 0;     // Draw solid black pencil stroke
                                         output[ni*4+1] = 0;
                                         output[ni*4+2] = 0;
                                     }
@@ -232,7 +263,7 @@
                     }
                 }
 
-                // Send the final drawing to the canvas
+                // Apply to canvas
                 for (let i = 0; i < data.length; i++) {
                     data[i] = output[i];
                 }
@@ -250,7 +281,6 @@
             const statusText = document.getElementById('statusText');
             const rotationAngle = parseInt(document.getElementById('rotationSelect').value);
             
-            // Layout variables
             const boxX = parseFloat(document.getElementById('boxX').value);
             const boxY = parseFloat(document.getElementById('boxY').value);
             const boxWidth = parseFloat(document.getElementById('boxWidth').value);
