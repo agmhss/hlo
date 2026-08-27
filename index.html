@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Census 2027 Pro Map Generator - Smart Extractor</title>
+    <title>Census 2027 - Pencil Trace Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
@@ -12,7 +12,7 @@
     <div class="max-w-2xl w-full bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
         <div class="border-b border-slate-200 pb-4 mb-6">
             <h1 class="text-2xl font-bold text-slate-800">Census 2027 Pro Map Generator</h1>
-            <p class="text-sm text-slate-500 mt-1">Magnifies the uploaded map to detect and isolate only the primary boundaries, roads, and streets.</p>
+            <p class="text-sm text-slate-500 mt-1">Converts the satellite map into a fine pencil tracing of roads and boundaries.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -25,23 +25,23 @@
                     <input type="file" id="imageInput" accept="image/*" class="w-full text-sm text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-300 rounded-lg p-1">
                 </div>
 
-                <!-- Sketch Extractor & Advanced Filters -->
+                <!-- Pencil Trace Controls -->
                 <div class="mb-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <label class="flex items-center space-x-2 cursor-pointer mb-3 border-b border-slate-200 pb-2">
                         <input type="checkbox" id="extractToggle" class="w-4 h-4 text-blue-600 rounded" checked>
-                        <span class="text-sm font-semibold text-slate-700">Enable Smart Extraction</span>
+                        <span class="text-sm font-semibold text-slate-700">Enable Pencil Tracing</span>
                     </label>
                     
                     <div id="sliderContainer" class="space-y-4 pt-1">
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">Road/Boundary Detection (Brightness)</label>
-                            <input type="range" id="thresholdSlider" min="100" max="255" value="165" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
-                            <p class="text-[9px] text-slate-500 mt-1 leading-tight">Filters out the dimmed outside area and background.</p>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Pencil Sharpness (Edge Detection)</label>
+                            <input type="range" id="edgeSlider" min="5" max="100" value="25" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                            <p class="text-[9px] text-slate-500 mt-1 leading-tight">Controls how aggressively it traces lines. Lower = more lines.</p>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">Text & Number Remover (Size Filter)</label>
-                            <input type="range" id="noiseSlider" min="0" max="3000" value="800" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
-                            <p class="text-[9px] text-slate-500 mt-1 leading-tight">Erases disconnected text and small icons while preserving long continuous roads.</p>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Background Noise Ignore</label>
+                            <input type="range" id="brightnessSlider" min="50" max="220" value="145" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                            <p class="text-[9px] text-slate-500 mt-1 leading-tight">Filters out dark fields so only bright white roads/boundaries are traced.</p>
                         </div>
                     </div>
                 </div>
@@ -57,7 +57,7 @@
                     </select>
                 </div>
 
-                <!-- Layout Controls (Defaults Set) -->
+                <!-- Layout Controls (Exact requested defaults) -->
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-slate-700 mb-2">3. Layout Positioning</label>
                     <div class="grid grid-cols-2 gap-2">
@@ -83,14 +83,14 @@
 
             <!-- Right Column: Preview & Action -->
             <div class="flex flex-col">
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Live Magnified Preview</label>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Live Trace Preview</label>
                 <div class="flex-grow border border-slate-300 bg-slate-50 rounded-lg overflow-hidden flex justify-center items-center relative min-h-[200px] mb-4 shadow-inner">
                     <canvas id="previewCanvas" class="max-w-full max-h-[350px] hidden"></canvas>
                     <p id="placeholder" class="text-slate-400 text-sm absolute">Upload map to preview</p>
                 </div>
 
                 <button onclick="generatePDF()" id="processBtn" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
-                    Generate Final A3 PDF
+                    Generate Traced A3 PDF
                 </button>
                 <p id="statusText" class="text-center text-xs font-medium text-slate-600 mt-3 h-4"></p>
             </div>
@@ -99,14 +99,12 @@
 
     <script>
         const TEMPLATE_PDF_PATH = './census_template.pdf';
-        
-        // Processing Magnifier
         const INTERNAL_SCALE = 2.0;
 
         const imageInput = document.getElementById('imageInput');
         const extractToggle = document.getElementById('extractToggle');
-        const thresholdSlider = document.getElementById('thresholdSlider');
-        const noiseSlider = document.getElementById('noiseSlider');
+        const edgeSlider = document.getElementById('edgeSlider');
+        const brightnessSlider = document.getElementById('brightnessSlider');
         const sliderContainer = document.getElementById('sliderContainer');
         const previewCanvas = document.getElementById('previewCanvas');
         const ctx = previewCanvas.getContext('2d', { willReadFrequently: true });
@@ -122,8 +120,8 @@
             triggerUpdate();
         });
         
-        thresholdSlider.addEventListener('input', triggerUpdate);
-        noiseSlider.addEventListener('input', triggerUpdate);
+        edgeSlider.addEventListener('input', triggerUpdate);
+        brightnessSlider.addEventListener('input', triggerUpdate);
 
         function triggerUpdate() {
             clearTimeout(updateTimeout);
@@ -137,7 +135,6 @@
             const reader = new FileReader();
             reader.onload = (event) => {
                 originalImg.onload = () => {
-                    // Magnify canvas for high-precision detection
                     previewCanvas.width = originalImg.width * INTERNAL_SCALE;
                     previewCanvas.height = originalImg.height * INTERNAL_SCALE;
                     placeholder.classList.add('hidden');
@@ -152,7 +149,6 @@
         function updatePreview() {
             if (!originalImg.src) return;
 
-            // Draw magnified original
             ctx.drawImage(originalImg, 0, 0, previewCanvas.width, previewCanvas.height);
 
             if (extractToggle.checked) {
@@ -160,77 +156,49 @@
                 const height = previewCanvas.height;
                 const imageData = ctx.getImageData(0, 0, width, height);
                 const data = imageData.data;
+                const output = new Uint8ClampedArray(data.length);
                 
-                const threshold = parseInt(thresholdSlider.value);
-                const minArea = parseInt(noiseSlider.value);
+                const edgeSensitivity = parseInt(edgeSlider.value);
+                const noiseIgnore = parseInt(brightnessSlider.value);
 
-                // Step 1: Strict High-Brightness Threshold
-                // This targets the bright white lines and ignores the dimmed outside areas
-                for (let i = 0; i < data.length; i += 4) {
-                    const r = data[i], g = data[i+1], b = data[i+2];
-                    const brightness = (r + g + b) / 3;
-
-                    if (brightness > threshold) {
-                        data[i] = 0; data[i+1] = 0; data[i+2] = 0; // Turn roads/boundaries Black
-                    } else {
-                        data[i] = 255; data[i+1] = 255; data[i+2] = 255; // Turn everything else White
-                    }
+                // Step 1: Precompute grayscale for edge detection and reset canvas to pure white paper
+                const gray = new Uint8Array(width * height);
+                for (let i = 0; i < width * height; i++) {
+                    gray[i] = (data[i*4] + data[i*4+1] + data[i*4+2]) / 3;
+                    
+                    // Default to white background
+                    output[i*4] = 255; 
+                    output[i*4+1] = 255; 
+                    output[i*4+2] = 255; 
+                    output[i*4+3] = 255;
                 }
 
-                // Step 2: Advanced Area Filter (Wipes out text, icons, and scattered pixels)
-                if (minArea > 0) {
-                    const visited = new Uint8Array(width * height);
-                    const queue = new Int32Array(width * height);
-                    const component = new Int32Array(width * height);
-
-                    for (let i = 0; i < width * height; i++) {
-                        // If pixel is a black line and unvisited
-                        if (data[i * 4] === 0 && visited[i] === 0) {
-                            let head = 0, tail = 0, compTail = 0;
-                            
-                            queue[tail++] = i;
-                            visited[i] = 1;
-
-                            // Flood-fill to measure the continuous size of the line/shape
-                            while (head < tail) {
-                                let curr = queue[head++];
-                                component[compTail++] = curr;
-
-                                let cy = Math.floor(curr / width);
-                                let cx = curr % width;
-
-                                // 8-way directional check
-                                for (let dy = -1; dy <= 1; dy++) {
-                                    for (let dx = -1; dx <= 1; dx++) {
-                                        if (dx === 0 && dy === 0) continue;
-                                        
-                                        let nx = cx + dx;
-                                        let ny = cy + dy;
-
-                                        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                                            let nIdx = ny * width + nx;
-                                            if (data[nIdx * 4] === 0 && visited[nIdx] === 0) {
-                                                visited[nIdx] = 1;
-                                                queue[tail++] = nIdx;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // If the shape is smaller than the threshold, it's text/noise -> Erase it
-                            if (compTail < minArea) {
-                                for (let k = 0; k < compTail; k++) {
-                                    let idx = component[k] * 4;
-                                    data[idx] = 255;     // R
-                                    data[idx + 1] = 255; // G
-                                    data[idx + 2] = 255; // B
-                                }
-                            }
+                // Step 2: Laplacian Edge Tracing
+                // This specifically detects contours and draws thin pencil lines
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const i = y * width + x;
+                        
+                        const laplacian = 
+                            4 * gray[i] 
+                            - gray[i - 1] 
+                            - gray[i + 1] 
+                            - gray[i - width] 
+                            - gray[i + width];
+                        
+                        // To be drawn as a pencil stroke, it must be a sharp edge AND exist in a bright area (to ignore field textures)
+                        if (laplacian > edgeSensitivity && gray[i] > noiseIgnore) {
+                            output[i*4] = 0;     // Black pencil stroke
+                            output[i*4+1] = 0;
+                            output[i*4+2] = 0;
                         }
                     }
                 }
 
+                // Push traced array back to canvas
+                for (let i = 0; i < data.length; i++) {
+                    data[i] = output[i];
+                }
                 ctx.putImageData(imageData, 0, 0);
             }
         }
@@ -279,14 +247,13 @@
                 const bytes = new Uint8Array(binaryString.length);
                 for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
 
-                statusText.textContent = 'Embedding into PDF...';
+                statusText.textContent = 'Embedding trace into PDF...';
 
                 const { PDFDocument } = PDFLib;
                 const pdfDoc = await PDFDocument.load(pdfArrayBuffer);
                 const page = pdfDoc.getPages()[0];
                 const embeddedImage = await pdfDoc.embedJpg(bytes);
 
-                // Employs the hardcoded requested dimensions
                 page.drawImage(embeddedImage, { x: boxX, y: boxY, width: boxWidth, height: boxHeight });
 
                 statusText.textContent = 'Downloading...';
@@ -295,7 +262,7 @@
                 const blob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = 'Census_2027_Final_Map.pdf';
+                link.download = 'Census_2027_Pencil_Map.pdf';
                 link.click();
 
                 statusText.textContent = 'Success! File Downloaded.';
